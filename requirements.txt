@@ -1,3 +1,5 @@
 pandas
 facebook_business
 openpyxl
+requests
+pysocks
