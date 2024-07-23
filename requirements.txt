@@ -1,0 +1,3 @@
+pandas
+facebook_business
+openpyxl
