@@ -1,2 +1,3 @@
 scripts/config.py
 venv/
+scripts/service_secret.json

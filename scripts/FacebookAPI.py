@@ -14,7 +14,7 @@ from facebook_business import FacebookSession
 import datetime
 
 
-class FacebookAPI():
+class FacebookAPI:
     def __init__(self, my_access_token: str, my_app_id: str, my_app_secret: str, business_manager_id: str,
                  proxies: Dict[str, str] = None):
         session = FacebookSession(
@@ -135,8 +135,14 @@ class FacebookAPI():
             accounts_data.append(row)
         df_accounts = pd.DataFrame(accounts_data, columns=fields_account)
 
-        with pd.ExcelWriter(f"campaign_data_{time_range['since']}_{time_range['until']}.xlsx") as writer:
-            df_insights.to_excel(writer, sheet_name="Insights", index=False)
-            df_campaigns.to_excel(writer, sheet_name="Campaigns", index=False)
-            df_accounts.to_excel(writer, sheet_name="Accounts", index=False)
-            print("Таблицы собраны")
+        df_dict = {
+            "Insights": df_insights,
+            "Campaigns": df_campaigns,
+            "Accounts": df_accounts
+        }
+        return df_dict
+        # with pd.ExcelWriter(f"campaign_data_{time_range['since']}_{time_range['until']}.xlsx") as writer:
+        #     df_insights.to_excel(writer, sheet_name="Insights", index=False)
+        #     df_campaigns.to_excel(writer, sheet_name="Campaigns", index=False)
+        #     df_accounts.to_excel(writer, sheet_name="Accounts", index=False)
+        #     print("Таблицы собраны")

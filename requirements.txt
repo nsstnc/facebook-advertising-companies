@@ -3,3 +3,6 @@ facebook_business
 openpyxl
 requests
 pysocks
+gspread
+gspread-dataframe
+oauth2client
