@@ -6,3 +6,6 @@ pysocks
 gspread
 gspread-dataframe
 oauth2client
+fastapi
+sqlalchemy
+apscheduler

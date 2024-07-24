@@ -12,15 +12,18 @@ class GoogleSpreadSheet:
         self.client = gspread.authorize(credentials)
 
 
-    def write_to_google_sheets(self, df_dict, emails, spreadsheet_name=None, spreadsheet_url=None):
-        if spreadsheet_url:
-            # открытие существующей таблицы
-            spreadsheet = self.client.open_by_url(spreadsheet_url)
-        else:
-            # создание новой таблицы
-            spreadsheet = self.client.create(spreadsheet_name)
-            for email in emails:
-                spreadsheet.share(email, perm_type='user', role='writer')
+    def create_spreadsheet(self, emails, spreadsheet_name):
+        spreadsheet = self.client.create(spreadsheet_name)
+        for email in emails:
+            spreadsheet.share(email, perm_type='user', role='writer')
+
+        return spreadsheet.url
+
+    def write_to_google_sheets(self, df_dict, spreadsheet_url):
+        # открытие существующей таблицы
+        spreadsheet = self.client.open_by_url(spreadsheet_url)
+
+
 
         for sheet_name, df in df_dict.items():
             try:

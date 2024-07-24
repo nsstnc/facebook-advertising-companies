@@ -1,7 +1,6 @@
-import json
 from FacebookAPI import FacebookAPI
 from GoogleSpreadSheet import GoogleSpreadSheet
-from config import MARKETING_API_ACCESS_TOKEN, APP_ID, APP_SECRET, PROXIE, BUSINESS_MANAGER_ID
+from app.config import MARKETING_API_ACCESS_TOKEN, APP_ID, APP_SECRET, PROXIE, BUSINESS_MANAGER_ID
 
 proxie = PROXIE
 token = MARKETING_API_ACCESS_TOKEN

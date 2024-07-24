@@ -1,3 +1,4 @@
-scripts/config.py
+app/config.py
 venv/
 scripts/service_secret.json
+app/facebook-advertising-campaigns.db
