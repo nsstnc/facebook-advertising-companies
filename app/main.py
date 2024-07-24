@@ -1,6 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import *
 import datetime
@@ -13,7 +13,7 @@ from scripts.GoogleSpreadSheet import GoogleSpreadSheet
 from app.config import MARKETING_API_ACCESS_TOKEN, APP_ID, APP_SECRET, PROXIE, BUSINESS_MANAGER_ID
 from sqlalchemy.orm import Session
 from database import Base, engine, init_db, get_session
-from models import Tables, Accounts
+from models import Tables, Accounts, AccountFields, CampaignFields, AdsFields
 from functools import partial
 
 app = FastAPI(
@@ -35,15 +35,29 @@ app.add_middleware(
 )
 
 
-def periodic_task(api, url, time_range):
-    sheets = api.get_advertising_campaign(time_range=time_range)
+def periodic_task(api, url, account_fields, campaign_fields, ad_fields, time_range):
+    print(f"Запущен сбор статистики с {time_range['since']} по {time_range['until']} по ссылке {url}")
+    sheets = api.get_advertising_campaign(account_fields, campaign_fields, ad_fields, time_range=time_range)
     google_client.write_to_google_sheets(df_dict=sheets, spreadsheet_url=url)
 
 
-def start_scheduler(account_id, name, interval_in_minutes: int, api: FacebookAPI, url, time_range):
-    scheduler.start()
+def start_task(account_id,
+               name,
+               interval_in_minutes: int,
+               api: FacebookAPI,
+               url: str,
+               account_fields,
+               campaign_fields,
+               ad_fields,
+               time_range):
     scheduler.add_job(
-        partial(periodic_task, api=api, url=url, time_range=time_range),
+        partial(periodic_task,
+                api=api,
+                url=url,
+                account_fields=account_fields,
+                campaign_fields=campaign_fields,
+                ad_fields=ad_fields,
+                time_range=time_range),
         trigger=IntervalTrigger(minutes=interval_in_minutes),
         id=str(account_id),
         name=name,
@@ -54,11 +68,20 @@ def start_scheduler(account_id, name, interval_in_minutes: int, api: FacebookAPI
 @app.post("/start_insights")
 def start_insights(account_id: int, emails: List[str], date_start: datetime.date, date_end: datetime.date,
                    interval_in_minutes: int,
-                   spreadsheet_url: str = None, db: Session = Depends(get_session)):
+                   spreadsheet_url: str = None,
+                   account_fields: Optional[List[AccountFields]] = Query(None),
+                   ad_fields: Optional[List[AdsFields]] = Query(None),
+                   campaign_fields: Optional[List[CampaignFields]] = Query(None),
+                   db: Session = Depends(get_session)):
     try:
         obj = db.query(Accounts).filter(Accounts.id == account_id).first()
         if not obj:
             raise HTTPException(status_code=404, detail="Объект не найден")
+
+        # запрошенные поля
+        account_fields = [x.value for x in account_fields]
+        ad_fields = [x.value for x in ad_fields]
+        campaign_fields = [x.value for x in campaign_fields]
 
         # собираем api
         api = FacebookAPI(obj.marketing_api_access_token,
@@ -74,7 +97,6 @@ def start_insights(account_id: int, emails: List[str], date_start: datetime.date
         if spreadsheet_url is None:
             spreadsheet_url = google_client.create_spreadsheet(emails,
                                                                spreadsheet_name=f"campaign_data_{time_range['since']}_{time_range['until']}")
-            print(spreadsheet_url)
         values = {'url': spreadsheet_url}
         # добавляем ссылку на таблицу в БД
         stmt = insert(Tables).values(values)
@@ -82,9 +104,16 @@ def start_insights(account_id: int, emails: List[str], date_start: datetime.date
         db.commit()
 
         # запускаем по получение данных по интервалу
-        start_scheduler(account_id, f"campaign_data_{time_range['since']}_{time_range['until']}", interval_in_minutes,
-                        api,
-                        spreadsheet_url, time_range)
+        start_task(account_id=account_id,
+                   name=f"campaign_data_{time_range['since']}_{time_range['until']}",
+                   interval_in_minutes=interval_in_minutes,
+                   api=api,
+                   url=spreadsheet_url,
+                   account_fields=account_fields,
+                   campaign_fields=campaign_fields,
+                   ad_fields=ad_fields,
+                   time_range=time_range)
+
         return {"status": "success",
                 "message": "Периодическая задача запущена"}
 
@@ -121,18 +150,19 @@ def add_account(marketing_api_access_token: str, app_id: str, app_secret: str, b
 @app.get("/get_accounts")
 def get_accounts(db: Session = Depends(get_session)):
     try:
-
-        if not obj:
-            raise HTTPException(status_code=404, detail="Объект не найден")
+        accounts = db.query(Accounts).all()
+        if not accounts:
+            raise HTTPException(status_code=404, detail="Записи не найдены")
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail="Ошибка базы данных")
 
     return {"status": "success",
-            "data": obj}
+            "data": accounts}
 
 
 if __name__ == "__main__":
     init_db()
+    scheduler.start()
     try:
         connection = engine.connect()
         print("Соединение с базой данных установлено")

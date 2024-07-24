@@ -54,7 +54,7 @@ class FacebookAPI:
 
         return all_accounts
 
-    def get_advertising_campaign(self, time_range=Dict[str, str]):
+    def get_advertising_campaign(self, account_fields, campaign_fields, ad_fields, time_range=Dict[str, str]):
 
 
         params_ads = {'time_range': time_range,
@@ -73,67 +73,33 @@ class FacebookAPI:
                            'level': 'account',
                            'export_format': 'xls'}
 
-        fields_ads = [
-            'account_id',
-            'account_name',
-            'campaign_id',
-            'campaign_name',
-            'ad_name',
-            'ad_id',
-            'impressions',
-            'clicks',
-            'cpm',
-            'spend',
-            'account_currency',
-            'ctr',
-            'created_time',
-            'date_start',
-            'date_stop',
-        ]
-        fields_campaign = [
-            'id',
-            'name',
-            'status',
-            'budget_remaining',
-            'start_time',
-            'stop_time',
-        ]
-        fields_account = [
-            'account_id',
-            'name',
-            'owner',
-            'account_status',
-            'balance',
-            'created_time',
-            'amount_spent',
-            'currency',
-        ]
+
 
         import pandas as pd
 
-        all_insights = self.get_insights(fields_ads, params_ads)
-        all_campaigns = self.get_campaigns(fields_campaign, params_campaigns)
-        all_accounts = self.get_accounts(fields_account, params_accounts)
+        all_insights = self.get_insights(ad_fields, params_ads)
+        all_campaigns = self.get_campaigns(campaign_fields, params_campaigns)
+        all_accounts = self.get_accounts(account_fields, params_accounts)
 
         # DataFrame из all_insights
         insights_data = []
         for insight in all_insights:
-            row = {field: insight.get(field, None) for field in fields_ads}
+            row = {field: insight.get(field, None) for field in ad_fields}
             insights_data.append(row)
-        df_insights = pd.DataFrame(insights_data, columns=fields_ads)
+        df_insights = pd.DataFrame(insights_data, columns=ad_fields)
 
         # DataFrame из all_campaigns
         campaigns_data = []
         for campaign in all_campaigns:
-            row = {field: campaign.get(field, None) for field in fields_campaign}
+            row = {field: campaign.get(field, None) for field in campaign_fields}
             campaigns_data.append(row)
-        df_campaigns = pd.DataFrame(campaigns_data, columns=fields_campaign)
+        df_campaigns = pd.DataFrame(campaigns_data, columns=campaign_fields)
         # DataFrame из all_accounts
         accounts_data = []
         for account in all_accounts:
-            row = {field: account.get(field, None) for field in fields_account}
+            row = {field: account.get(field, None) for field in account_fields}
             accounts_data.append(row)
-        df_accounts = pd.DataFrame(accounts_data, columns=fields_account)
+        df_accounts = pd.DataFrame(accounts_data, columns=account_fields)
 
         df_dict = {
             "Insights": df_insights,
